@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "vitest run --pool=threads",
+    "test": "vitest run --pool=threads --exclude \"**/.worktrees/**\" --exclude \"**/external/**\" --exclude \"**/RTK/**\" --exclude \"**/dist/**\"",
     "test:watch": "vitest",
     "prepack": "npm run build"
   },
