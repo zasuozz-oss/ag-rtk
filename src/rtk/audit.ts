@@ -23,7 +23,11 @@ export function getAuditPath(): string {
 }
 
 export async function recordAudit(event: Omit<AuditEvent, 'timestamp'>): Promise<void> {
-  const target = getAuditPath();
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.appendFile(target, JSON.stringify({ timestamp: new Date().toISOString(), ...event }) + '\n', 'utf8');
+  try {
+    const target = getAuditPath();
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.appendFile(target, JSON.stringify({ timestamp: new Date().toISOString(), ...event }) + '\n', 'utf8');
+  } catch {
+    // Audit failure must not break command execution.
+  }
 }
