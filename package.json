@@ -1,0 +1,37 @@
+{
+  "name": "rtk-mcp",
+  "version": "0.1.0",
+  "description": "MCP and desktop agent bridge for RTK command-output optimization",
+  "type": "module",
+  "bin": {
+    "rtk-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src/templates",
+    "setup.sh",
+    "README.md",
+    "README.vi.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "commander": "^12.1.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.32",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
