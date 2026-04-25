@@ -7,8 +7,8 @@ coverage/
 worktrees
 worktrees/
 
-RTK/
-external/
+/RTK/
+/external/
 
 .rtk-mcp/
 *.log
