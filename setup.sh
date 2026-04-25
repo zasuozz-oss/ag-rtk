@@ -276,24 +276,30 @@ configure_clients() {
 
   cd "$SCRIPT_DIR"
 
-  # Clone/pull RTK Rust source vào ./RTK/ (không cần --global, luôn local)
-  # Nếu RTK/ tồn tại nhưng không có .git (restore từ backup repo), sẽ tự xóa rồi clone lại
-  node dist/cli.js setup --client all --mode rtk-source --cwd "$SCRIPT_DIR"
-
-  # Strip RTK/.git sau khi sync để parent repo có thể track RTK source files trực tiếp.
-  # Khi clone lại, setup sẽ phát hiện RTK/ không có .git và tự clone mới từ upstream.
-  if [[ -d "$SCRIPT_DIR/RTK/.git" ]]; then
-    info "Strip RTK/.git để parent repo track được source files..."
-    rm -rf "$SCRIPT_DIR/RTK/.git"
-    ok "RTK/.git đã xóa — RTK source sẵn sàng cho git add."
-  fi
-
-  # MCP config: luôn ghi vào global desktop config paths (không phụ thuộc --global)
+  # 1. MCP config — ghi vào global desktop config paths trước tiên.
+  #    Không phụ thuộc network/git, luôn phải thành công.
+  step "Ghi MCP config"
   node dist/cli.js setup --client all --mode mcp --cwd "$SCRIPT_DIR"
 
-  # Instructions + skills: cài global vào ~/.claude, ~/.codex, ~/.gemini
+  # 2. Instructions + skills: cài global vào ~/.claude, ~/.codex, ~/.gemini
+  step "Cài instructions & skills (global)"
   node dist/cli.js setup --client all --mode instructions --global --cwd "$SCRIPT_DIR"
   node dist/cli.js setup --client all --mode skills --global --cwd "$SCRIPT_DIR"
+
+  # 3. Clone/pull RTK Rust source vào ./RTK/ — có thể fail (network/git).
+  #    Dùng || true để không block các bước trên nếu step này lỗi.
+  step "Sync RTK source (optional)"
+  if node dist/cli.js setup --client all --mode rtk-source --cwd "$SCRIPT_DIR"; then
+    # Strip RTK/.git sau khi sync để parent repo track được source files trực tiếp.
+    # Khi setup lại, rtk-source.ts phát hiện RTK/ không có .git rồi clone mới.
+    if [[ -d "$SCRIPT_DIR/RTK/.git" ]]; then
+      info "Strip RTK/.git để parent repo track được source files..."
+      rm -rf "$SCRIPT_DIR/RTK/.git"
+      ok "RTK/.git đã xóa — RTK source sẵn sàng cho git add."
+    fi
+  else
+    warn "RTK source sync thất bại (network hoặc git lỗi). Bỏ qua — không ảnh hưởng MCP."
+  fi
 
   ok "RTK MCP setup hoàn tất."
   info "Restart Antigravity / Claude Desktop / Codex để áp dụng."

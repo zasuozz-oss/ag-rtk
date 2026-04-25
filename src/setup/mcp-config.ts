@@ -17,9 +17,20 @@ function resolveCliPath(): string {
   return path.join(projectRoot, 'dist', 'cli.js');
 }
 
+/**
+ * Resolve the absolute path to the node executable.
+ * Desktop apps (Claude Desktop, Codex, Antigravity) run with a restricted PATH
+ * and may not find `node` by name. Using the full path avoids this issue.
+ */
+function resolveNodePath(): string {
+  // process.execPath is always the absolute path to the running node binary
+  return process.execPath;
+}
+
 export function getMcpEntry(): { command: string; args: string[] } {
   const cliPath = resolveCliPath();
-  return { command: 'node', args: [cliPath, 'mcp'] };
+  const nodePath = resolveNodePath();
+  return { command: nodePath, args: [cliPath, 'mcp'] };
 }
 
 export function mergeJsonMcpConfig(existing: unknown): any {
@@ -35,10 +46,39 @@ export function mergeJsonMcpConfig(existing: unknown): any {
 
 export function renderCodexTomlEntry(): string {
   const cliPath = resolveCliPath().replace(/\\/g, '/');
+  const nodePath = resolveNodePath().replace(/\\/g, '/');
   return `[mcp_servers.rtk]
-command = "node"
+command = "${nodePath}"
 args = ["${cliPath}", "mcp"]
 `;
+}
+
+/**
+ * Find the Claude Desktop config path on Windows.
+ * Supports both:
+ *   - Classic install: %APPDATA%\Claude\claude_desktop_config.json
+ *   - Microsoft Store (UWP): %LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\claude_desktop_config.json
+ *
+ * UWP takes priority if the Packages directory exists (Store version redirects AppData writes).
+ */
+async function findWindowsClaudeConfigPath(env: NodeJS.ProcessEnv, home: string): Promise<string> {
+  const localAppData = env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+  const packagesDir = path.join(localAppData, 'Packages');
+
+  // Search for Claude_* package directory (UWP / Microsoft Store install)
+  try {
+    const entries = await fs.readdir(packagesDir);
+    const claudePackage = entries.find(e => e.startsWith('Claude_'));
+    if (claudePackage) {
+      return path.join(packagesDir, claudePackage, 'LocalCache', 'Roaming', 'Claude', 'claude_desktop_config.json');
+    }
+  } catch {
+    // packagesDir doesn't exist or unreadable — fall through to classic path
+  }
+
+  // Classic (non-Store) install
+  const appData = env.APPDATA || path.join(home, 'AppData', 'Roaming');
+  return path.join(appData, 'Claude', 'claude_desktop_config.json');
 }
 
 export function getClaudeDesktopConfigPath(
@@ -46,14 +86,15 @@ export function getClaudeDesktopConfigPath(
   env: NodeJS.ProcessEnv = process.env,
   home = os.homedir(),
 ): string {
-  if (platform === 'win32') {
-    const appData = env.APPDATA || path.join(home, 'AppData', 'Roaming');
-    return path.join(appData, 'Claude', 'claude_desktop_config.json');
-  }
   if (platform === 'darwin') {
     return path.join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
   }
-  return path.join(home, '.config', 'Claude', 'claude_desktop_config.json');
+  if (platform !== 'win32') {
+    return path.join(home, '.config', 'Claude', 'claude_desktop_config.json');
+  }
+  // Windows: classic fallback — async UWP detection is done in installMcpConfig
+  const appData = env.APPDATA || path.join(home, 'AppData', 'Roaming');
+  return path.join(appData, 'Claude', 'claude_desktop_config.json');
 }
 
 async function readJson(filePath: string): Promise<unknown> {
@@ -73,7 +114,9 @@ export async function installMcpConfig(client: ClientName): Promise<string> {
   }
 
   if (client === 'claude') {
-    const target = getClaudeDesktopConfigPath();
+    const target = process.platform === 'win32'
+      ? await findWindowsClaudeConfigPath(process.env, os.homedir())
+      : getClaudeDesktopConfigPath();
     await writeJson(target, mergeJsonMcpConfig(await readJson(target)));
     return target;
   }
