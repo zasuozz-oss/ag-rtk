@@ -1,14 +1,6 @@
 node_modules/
-.npm-cache/
 dist/
 coverage/
-.worktrees
-.worktrees/
-worktrees
-worktrees/
-
-/RTK/
-/external/
-
+# Runtime artifacts
 .rtk-mcp/
 *.log

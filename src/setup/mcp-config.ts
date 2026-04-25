@@ -1,12 +1,25 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ClientName } from './clients.js';
 
-export function getMcpEntry() {
-  return process.platform === 'win32'
-    ? { command: 'cmd', args: ['/c', 'npx', '-y', 'rtk-mcp@latest', 'mcp'] }
-    : { command: 'npx', args: ['-y', 'rtk-mcp@latest', 'mcp'] };
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * Resolve the absolute path to dist/cli.js.
+ * Works whether called from src/ (dev) or dist/ (built).
+ */
+function resolveCliPath(): string {
+  // __dirname is either dist/setup/ or src/setup/ — go up to project root
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  return path.join(projectRoot, 'dist', 'cli.js');
+}
+
+export function getMcpEntry(): { command: string; args: string[] } {
+  const cliPath = resolveCliPath();
+  return { command: 'node', args: [cliPath, 'mcp'] };
 }
 
 export function mergeJsonMcpConfig(existing: unknown): any {
@@ -21,14 +34,10 @@ export function mergeJsonMcpConfig(existing: unknown): any {
 }
 
 export function renderCodexTomlEntry(): string {
-  const command = process.platform === 'win32' ? 'cmd' : 'npx';
-  const args =
-    process.platform === 'win32'
-      ? '["/c", "npx", "-y", "rtk-mcp@latest", "mcp"]'
-      : '["-y", "rtk-mcp@latest", "mcp"]';
+  const cliPath = resolveCliPath().replace(/\\/g, '/');
   return `[mcp_servers.rtk]
-command = "${command}"
-args = ${args}
+command = "node"
+args = ["${cliPath}", "mcp"]
 `;
 }
 
@@ -69,6 +78,7 @@ export async function installMcpConfig(client: ClientName): Promise<string> {
     return target;
   }
 
+  // codex
   const target = path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'config.toml');
   const entry = renderCodexTomlEntry();
   const current = await fs.readFile(target, 'utf8').catch(() => '');

@@ -5,17 +5,21 @@ import { getClaudeDesktopConfigPath, mergeJsonMcpConfig, renderCodexTomlEntry } 
 describe('MCP config writers', () => {
   it('merges JSON mcp server config idempotently', () => {
     const config = mergeJsonMcpConfig({ mcpServers: { other: { command: 'x' } } });
-    expect(config.mcpServers.rtk).toEqual(
-      process.platform === 'win32'
-        ? { command: 'cmd', args: ['/c', 'npx', '-y', 'rtk-mcp@latest', 'mcp'] }
-        : { command: 'npx', args: ['-y', 'rtk-mcp@latest', 'mcp'] },
-    );
+    // Should use local node + dist/cli.js instead of npx
+    expect(config.mcpServers.rtk.command).toBe('node');
+    expect(config.mcpServers.rtk.args[0]).toContain('dist');
+    expect(config.mcpServers.rtk.args[0]).toContain('cli.js');
+    expect(config.mcpServers.rtk.args[1]).toBe('mcp');
+    // Must preserve existing servers
     expect(config.mcpServers.other.command).toBe('x');
   });
 
   it('renders Codex TOML entry', () => {
-    expect(renderCodexTomlEntry()).toContain('[mcp_servers.rtk]');
-    expect(renderCodexTomlEntry()).toContain(process.platform === 'win32' ? 'command = "cmd"' : 'command = "npx"');
+    const toml = renderCodexTomlEntry();
+    expect(toml).toContain('[mcp_servers.rtk]');
+    expect(toml).toContain('command = "node"');
+    expect(toml).toContain('cli.js');
+    expect(toml).toContain('mcp');
   });
 
   it('resolves Claude Desktop config path on Windows', () => {

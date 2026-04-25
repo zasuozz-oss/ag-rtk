@@ -25,6 +25,7 @@ program
   .option('--client <client>', 'claude, codex, antigravity, or all', 'all')
   .option('--mode <mode>', 'mcp, instructions, skills, rtk-source, or all', 'all')
   .option('--cwd <path>', 'workspace root for project-local files', process.cwd())
+  .option('-g, --global', 'install skills and rules globally instead of per-workspace (Antigravity only)', false)
   .action(async (options) => {
     await runSetup(options);
   });

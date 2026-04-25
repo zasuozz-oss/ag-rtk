@@ -3,7 +3,7 @@ export type SetupMode = 'mcp' | 'instructions' | 'skills' | 'rtk-source';
 
 export function expandClients(client: string): ClientName[] {
   if (client === 'all') return ['claude', 'codex', 'antigravity'];
-  if (client === 'claude' || client === 'codex' || client === 'antigravity') return [client];
+  if (['claude', 'codex', 'antigravity'].includes(client)) return [client as ClientName];
   throw new Error(`Unsupported client: ${client}`);
 }
 

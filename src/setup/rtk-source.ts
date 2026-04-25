@@ -19,13 +19,19 @@ export function getRtkSourceCommands(exists: boolean): Array<[string, string[]]>
 
 export async function syncRtkSource(cwd: string): Promise<RtkSourceResult> {
   const rtkPath = path.resolve(cwd, 'RTK');
-  const exists = await fs.stat(path.join(rtkPath, '.git')).then(() => true).catch(() => false);
-  const [[command, args]] = getRtkSourceCommands(exists);
+  const hasGit = await fs.stat(path.join(rtkPath, '.git')).then(() => true).catch(() => false);
+
+  // RTK/ exists as plain files (restored from backup repo, no .git) — remove so clone works cleanly
+  if (!hasGit) {
+    await fs.rm(rtkPath, { recursive: true, force: true }).catch(() => {});
+  }
+
+  const [[command, args]] = getRtkSourceCommands(hasGit);
   const result = await runProcess(command, args, { cwd, timeoutMs: 120_000 });
 
   return {
     ok: result.exitCode === 0,
-    action: exists ? 'updated' : 'cloned',
+    action: hasGit ? 'updated' : 'cloned',
     path: rtkPath,
     stdout: result.stdout,
     stderr: result.stderr,

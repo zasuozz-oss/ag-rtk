@@ -34,15 +34,15 @@ export const schemas = {
 };
 
 export const descriptions = {
-  shouldUse: `Decide whether a desktop agent should use RTK for a shell command.
+  shouldUse: `Decide whether a shell command should go through RTK for compact output.
 
-WHEN TO USE: Before running a non-interactive shell command when RTK support is uncertain.
-AFTER THIS: If useRtk is true, call rtk_run with the original raw command; rtk_run rechecks and executes the RTK rewrite.`,
+WHEN TO USE: Any time you are about to run a shell command and are unsure if RTK supports it.
+AFTER THIS: If useRtk is true, call rtk_run with the original raw command.`,
 
-  run: `Run an RTK-supported non-interactive command and return compact output.
+  run: `Run any non-interactive shell command through RTK and return compact, token-efficient output (60-90% savings).
 
-WHEN TO USE: Tests, builds, lint/typecheck, git, file search/read/list, package, infra, and network commands that RTK supports.
-NEVER USE: Interactive commands, dev servers, watch mode, REPLs, raw JSON/parser output, or file mutation commands like rm/mv/cp.
+WHEN TO USE: Use for ALL shell commands by default — including ls, cat, find, grep. RTK supports 100+ commands across git, tests, builds, lint, files, search, package managers, containers, and cloud CLIs. If the user explicitly says to run a specific shell command, always use rtk_run even if a native tool could do something similar.
+NEVER USE for: interactive commands (dev servers, watch mode, REPLs), file mutations (rm/mv/cp/mkdir/chmod/touch), raw JSON/parser output piped to another program, or commands the user explicitly wants unfiltered.
 AFTER THIS: If the result includes teePath, call rtk_read_log before rerunning raw.`,
 
   readLog: `Read a full-output tee log created by rtk_run after a failed command.

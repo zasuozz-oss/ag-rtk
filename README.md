@@ -5,15 +5,14 @@ RTK MCP is a desktop agent bridge for RTK. It gives Claude Desktop, Codex, and A
 ## Quick Start
 
 ```bash
-./setup.sh
-```
+# 1. Build
+npm install && npm run build
 
-Manual:
+# 2. Install RTK binary + configure all clients (global recommended)
+bash setup.sh
 
-```bash
-npm install
-npm run build
-node dist/cli.js setup --client all --mode all
+# Update RTK binary when a new version is available
+bash setup.sh --update
 ```
 
 ## MCP Tools
@@ -27,15 +26,41 @@ node dist/cli.js setup --client all --mode all
 | `rtk_discover` | Find missed opportunities |
 | `rtk_verify` | Verify setup |
 
-## Claude Desktop
+## Global vs Workspace Install
 
-Setup writes the MCP server entry to `claude_desktop_config.json`:
+| Mode | Flag | What it does |
+|------|------|-------------|
+| **Global** | `--global` / `-g` | Appends RTK rules to global instruction file + copies skills to global skills dir |
+| **Workspace** | _(default)_ | Copies files to `cwd/.agents/` or `cwd/.claude/` |
 
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
+### Global paths per client
 
-Claude Desktop does not run RTK shell hooks. It must choose the MCP tools from descriptions and installed instruction files.
+| Client | Instructions | Skills |
+|--------|-------------|--------|
+| Antigravity | `~/.gemini/GEMINI.md` | `~/.gemini/antigravity/skills/` |
+| Claude | `~/.claude/CLAUDE.md` | `~/.claude/skills/` |
+| Codex | `~/.codex/AGENTS.md` | `~/.codex/skills/` |
+
+Global mode uses sentinel markers (`<!-- RTK_RULES_START/END -->`) to safely append/update RTK content without touching existing rules.
+
+## Custom Overlay
+
+Drop files into `custom/` to override defaults without touching the repo:
+
+```
+custom/
+├── instructions/
+│   └── RTK.md          # Overrides src/templates/instructions/RTK.md
+└── skills/
+    └── rtk-run/
+        └── SKILL.md    # Overrides src/templates/skills/rtk-run/SKILL.md
+```
+
+`setup.sh` applies the overlay automatically. Any file in `custom/` takes precedence over `src/templates/`.
+
+## Command Support
+
+RTK natively supports 100+ commands. For commands RTK has filter modules for but are missing from its registry (e.g. `npm test`, `pnpm install`), the bridge pre-normalizes them via local rewrites. Unrecognized commands fall back to `rtk proxy <cmd>` for tracked raw execution.
 
 ## Security Model
 
@@ -43,9 +68,12 @@ Claude Desktop does not run RTK shell hooks. It must choose the MCP tools from d
 
 - Blocks shell chaining and redirection outside quotes.
 - Blocks known file mutation commands such as `rm`, `mv`, `cp`, `chmod`, `touch`, and `mkdir`.
-- Requires `rtk rewrite` support before execution, so RTK remains the command support allowlist.
 - Saves failed raw output under `~/.rtk-mcp/tee` and exposes it through `rtk_read_log`.
 
 ## RTK Source Policy
 
-`RTK/` is a local upstream clone only. Setup uses `git clone` and `git pull --ff-only`. It never forks, pushes, or changes upstream remotes.
+`RTK/` is a local upstream clone only. Setup uses `git clone` and `git pull --ff-only`. It never forks, pushes, or changes upstream remotes. If `RTK/` is committed to git (e.g. as backup), setup automatically strips `RTK/.git` before syncing.
+
+## Testing Trigger Behavior
+
+See [`custom/test-trigger.md`](custom/test-trigger.md) for 20 test cases that validate when agents correctly use `rtk_run` vs native shell tools. Run each prompt in a fresh desktop client conversation and observe which tools are called.

@@ -52,12 +52,13 @@ export async function startMcpServer(): Promise<void> {
       }
 
       const decision = await shouldUseRtk(command, cwd);
-      if (!decision.useRtk || !decision.rewritten) {
-        await recordAudit({ tool: 'rtk_run', command, cwd, blockedReason: 'rtk rewrite returned no supported command' });
-        return textContent('RTK does not support this command. Use the native shell/tool instead.');
-      }
+      // Fall back to rtk proxy when RTK has no specific filter for this command.
+      // proxy = raw passthrough + analytics tracking (0% savings but command still runs).
+      const rewritten = decision.useRtk && decision.rewritten
+        ? decision.rewritten
+        : `rtk proxy ${command}`;
 
-      const run = await runCommandString(decision.rewritten, { cwd, timeoutMs });
+      const run = await runCommandString(rewritten, { cwd, timeoutMs });
       const raw = run.stdout + (run.stderr ? `\n${run.stderr}` : '');
       const teePath = run.exitCode && run.exitCode !== 0 ? await saveTeeLog(command, raw) : undefined;
 
@@ -71,7 +72,7 @@ export async function startMcpServer(): Promise<void> {
       });
 
       return jsonContent(
-        { ...run, rewritten: decision.rewritten, teePath },
+        { ...run, rewritten, teePath },
         teePath ? '**Next:** Call `rtk_read_log` with `teePath` before rerunning the raw command.' : '',
       );
     },
