@@ -305,6 +305,26 @@ configure_clients() {
   info "Restart Antigravity / Claude Desktop / Codex để áp dụng."
 }
 
+# ─── Configure Claude Code CLI hooks ─────────────────────────────────────────
+configure_claude_cli_hooks() {
+  step "Cấu hình Claude Code CLI hooks (rtk init)"
+
+  export PATH="${RTK_INSTALL_DIR}:$PATH"
+  if ! command -v rtk >/dev/null 2>&1; then
+    warn "RTK binary chưa sẵn sàng. Bỏ qua Claude CLI hooks."
+    return 0
+  fi
+
+  if rtk init -g --auto-patch; then
+    ok "Claude Code CLI hooks đã cài đặt."
+    info "Hook: ~/.claude/hooks/rtk-rewrite.sh"
+    info "Settings: ~/.claude/settings.json (PreToolUse hook đã đăng ký)"
+  else
+    warn "rtk init -g thất bại. Claude Code CLI hooks chưa được cài."
+    warn "Chạy thủ công: rtk init -g"
+  fi
+}
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 main() {
   echo -e "${BOLD}╔══════════════════════════════════════╗${NC}"
@@ -318,12 +338,14 @@ main() {
   verify_rtk
   build_mcp_server
   configure_clients "${1:-}"
+  configure_claude_cli_hooks
   check_ripgrep
 
   echo ""
   echo -e "${GREEN}${BOLD}✓ Setup hoàn tất!${NC}"
   echo -e "  RTK binary : ${RTK_INSTALL_DIR}/rtk"
   echo -e "  MCP server : ${SCRIPT_DIR}/dist/cli.js"
+  echo -e "  Claude CLI : ~/.claude/hooks/rtk-rewrite.sh"
   echo -e "  Tiếp theo  : Restart Antigravity/Claude/Codex"
 }
 
