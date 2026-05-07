@@ -4,7 +4,8 @@
       "Bash(git config *)",
       "Bash(npm run *)",
       "Bash(node \"C:/Users/Zasuo/Desktop/Project/AI-Tool/ag-rtk/dist/cli.js\" mcp)",
-      "Bash(where node *)"
+      "Bash(where node *)",
+      "mcp__rtk__rtk_run"
     ]
   }
 }
