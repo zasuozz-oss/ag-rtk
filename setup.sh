@@ -317,7 +317,7 @@ configure_claude_cli_hooks() {
 
   if rtk init -g --auto-patch; then
     ok "Claude Code CLI hooks đã cài đặt."
-    info "Hook: ~/.claude/hooks/rtk-rewrite.sh"
+    info "Hook: rtk hook claude"
     info "Settings: ~/.claude/settings.json (PreToolUse hook đã đăng ký)"
   else
     warn "rtk init -g thất bại. Claude Code CLI hooks chưa được cài."
@@ -345,7 +345,7 @@ main() {
   echo -e "${GREEN}${BOLD}✓ Setup hoàn tất!${NC}"
   echo -e "  RTK binary : ${RTK_INSTALL_DIR}/rtk"
   echo -e "  MCP server : ${SCRIPT_DIR}/dist/cli.js"
-  echo -e "  Claude CLI : ~/.claude/hooks/rtk-rewrite.sh"
+  echo -e "  Claude CLI : rtk hook claude"
   echo -e "  Tiếp theo  : Restart Antigravity/Claude/Codex"
 }
 

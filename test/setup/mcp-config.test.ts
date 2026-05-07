@@ -5,8 +5,8 @@ import { getClaudeDesktopConfigPath, mergeJsonMcpConfig, renderCodexTomlEntry } 
 describe('MCP config writers', () => {
   it('merges JSON mcp server config idempotently', () => {
     const config = mergeJsonMcpConfig({ mcpServers: { other: { command: 'x' } } });
-    // Should use local node + dist/cli.js instead of npx
-    expect(config.mcpServers.rtk.command).toBe('node');
+    // Should use the running Node executable + dist/cli.js instead of npx.
+    expect(config.mcpServers.rtk.command).toBe(process.execPath);
     expect(config.mcpServers.rtk.args[0]).toContain('dist');
     expect(config.mcpServers.rtk.args[0]).toContain('cli.js');
     expect(config.mcpServers.rtk.args[1]).toBe('mcp');
@@ -17,7 +17,7 @@ describe('MCP config writers', () => {
   it('renders Codex TOML entry', () => {
     const toml = renderCodexTomlEntry();
     expect(toml).toContain('[mcp_servers.rtk]');
-    expect(toml).toContain('command = "node"');
+    expect(toml).toContain(`command = "${process.execPath.replace(/\\/g, '/')}"`);
     expect(toml).toContain('cli.js');
     expect(toml).toContain('mcp');
   });
