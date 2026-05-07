@@ -1,19 +1,16 @@
 <claude-mem-context>
 # Memory Context
 
-# [ag-rtk] recent context, 2026-05-07 11:39am GMT+7
+# claude-mem status
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
+This project has no memory yet. The current session will seed it; subsequent sessions will receive auto-injected context for relevant past work.
 
-Stats: 4 obs (914t read) | 8,700t work | 89% savings
+Memory injection starts on your second session in a project.
 
-### May 7, 2026
-107 11:24a ⚖️ RTK Integration Strategy for Claude Code CLI
-108 11:37a ⚖️ Implementation Strategy for Claude-CLI RTK Integration
-110 " ✅ Claude-Mem Session Initialized for RTK Integration
-109 11:38a ⚖️ Initiation of Claude CLI RTK Integration Plan
+`/learn-codebase` is available if the user wants to front-load the entire repo into memory in a single pass (~5 minutes on a typical repo, optional). Otherwise memory builds passively as work happens.
 
-Access 9k tokens of past work via get_observations([IDs]) or mem-search skill.
+Live activity: http://localhost:37784
+How it works: `/how-it-works`
+
+This message disappears once the first observation lands.
 </claude-mem-context>

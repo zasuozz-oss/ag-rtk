@@ -272,24 +272,25 @@ build_mcp_server() {
 
 # ─── Configure clients ───────────────────────────────────────────────────────
 configure_clients() {
-  step "Cấu hình desktop clients (Antigravity / Claude / Codex)"
+  step "Cấu hình clients (Antigravity / Claude CLI)"
 
   cd "$SCRIPT_DIR"
 
-  # 1. MCP config — ghi vào global desktop config paths trước tiên.
-  #    Không phụ thuộc network/git, luôn phải thành công.
-  step "Ghi MCP config"
-  node dist/cli.js setup --client all --mode mcp --cwd "$SCRIPT_DIR"
+  # 1. MCP config — chỉ Antigravity (Claude CLI dùng hooks riêng)
+  step "Ghi MCP config (Antigravity)"
+  node dist/cli.js setup --client antigravity --mode mcp --cwd "$SCRIPT_DIR"
 
-  # 2. Instructions + skills: cài global vào ~/.claude, ~/.codex, ~/.gemini
+  # 2. Instructions + skills: cài global vào ~/.gemini, ~/.claude
   step "Cài instructions & skills (global)"
-  node dist/cli.js setup --client all --mode instructions --global --cwd "$SCRIPT_DIR"
-  node dist/cli.js setup --client all --mode skills --global --cwd "$SCRIPT_DIR"
+  node dist/cli.js setup --client antigravity --mode instructions --global --cwd "$SCRIPT_DIR"
+  node dist/cli.js setup --client claude-cli --mode instructions --global --cwd "$SCRIPT_DIR"
+  node dist/cli.js setup --client antigravity --mode skills --global --cwd "$SCRIPT_DIR"
+  node dist/cli.js setup --client claude-cli --mode skills --global --cwd "$SCRIPT_DIR"
 
   # 3. Clone/pull RTK Rust source vào ./RTK/ — có thể fail (network/git).
   #    Dùng || true để không block các bước trên nếu step này lỗi.
   step "Sync RTK source (optional)"
-  if node dist/cli.js setup --client all --mode rtk-source --cwd "$SCRIPT_DIR"; then
+  if node dist/cli.js setup --client antigravity --mode rtk-source --cwd "$SCRIPT_DIR"; then
     # Strip RTK/.git sau khi sync để parent repo track được source files trực tiếp.
     # Khi setup lại, rtk-source.ts phát hiện RTK/ không có .git rồi clone mới.
     if [[ -d "$SCRIPT_DIR/RTK/.git" ]]; then
@@ -302,10 +303,10 @@ configure_clients() {
   fi
 
   ok "RTK MCP setup hoàn tất."
-  info "Restart Antigravity / Claude Desktop / Codex để áp dụng."
+  info "Restart Antigravity để áp dụng."
 }
 
-# ─── Configure Claude Code CLI hooks ─────────────────────────────────────────
+# ─── Configure CLI hooks/instructions ────────────────────────────────────────
 configure_claude_cli_hooks() {
   step "Cấu hình Claude Code CLI hooks (rtk init)"
 
@@ -325,6 +326,25 @@ configure_claude_cli_hooks() {
   fi
 }
 
+configure_codex_cli_hooks() {
+  step "Cấu hình Codex CLI hooks/instructions (rtk init --codex)"
+
+  export PATH="${RTK_INSTALL_DIR}:$PATH"
+  if ! command -v rtk >/dev/null 2>&1; then
+    warn "RTK binary chưa sẵn sàng. Bỏ qua Codex CLI hooks/instructions."
+    return 0
+  fi
+
+  if rtk init -g --codex; then
+    ok "Codex CLI hooks/instructions đã cài đặt."
+    info "Command: rtk init -g --codex"
+    info "Files: ${CODEX_HOME:-$HOME/.codex}/AGENTS.md và RTK.md"
+  else
+    warn "rtk init -g --codex thất bại. Codex CLI hooks/instructions chưa được cài."
+    warn "Chạy thủ công: rtk init -g --codex"
+  fi
+}
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 main() {
   echo -e "${BOLD}╔══════════════════════════════════════╗${NC}"
@@ -339,6 +359,7 @@ main() {
   build_mcp_server
   configure_clients "${1:-}"
   configure_claude_cli_hooks
+  configure_codex_cli_hooks
   check_ripgrep
 
   echo ""
@@ -346,7 +367,8 @@ main() {
   echo -e "  RTK binary : ${RTK_INSTALL_DIR}/rtk"
   echo -e "  MCP server : ${SCRIPT_DIR}/dist/cli.js"
   echo -e "  Claude CLI : rtk hook claude"
-  echo -e "  Tiếp theo  : Restart Antigravity/Claude/Codex"
+  echo -e "  Codex CLI  : rtk init -g --codex"
+  echo -e "  Tiếp theo  : Restart Antigravity"
 }
 
 main "$@"
