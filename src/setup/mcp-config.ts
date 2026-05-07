@@ -107,6 +107,11 @@ async function writeJson(filePath: string, data: unknown): Promise<void> {
 }
 
 export async function installMcpConfig(client: ClientName): Promise<string> {
+  // Claude CLI uses hooks, not MCP.
+  if (client === 'claude-cli') {
+    return '(skipped - claude-cli uses hooks, not MCP)';
+  }
+
   if (client === 'antigravity') {
     const target = path.join(os.homedir(), '.gemini', 'antigravity', 'mcp_config.json');
     await writeJson(target, mergeJsonMcpConfig(await readJson(target)));

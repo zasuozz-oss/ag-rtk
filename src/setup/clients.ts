@@ -1,14 +1,14 @@
-export type ClientName = 'claude' | 'codex' | 'antigravity';
-export type SetupMode = 'mcp' | 'instructions' | 'skills' | 'rtk-source';
+export type ClientName = 'claude' | 'claude-cli' | 'codex' | 'antigravity';
+export type SetupMode = 'mcp' | 'instructions' | 'skills' | 'hooks' | 'rtk-source';
 
 export function expandClients(client: string): ClientName[] {
-  if (client === 'all') return ['claude', 'codex', 'antigravity'];
-  if (['claude', 'codex', 'antigravity'].includes(client)) return [client as ClientName];
+  if (client === 'all') return ['claude', 'claude-cli', 'codex', 'antigravity'];
+  if (['claude', 'claude-cli', 'codex', 'antigravity'].includes(client)) return [client as ClientName];
   throw new Error(`Unsupported client: ${client}`);
 }
 
 export function expandModes(mode: string): SetupMode[] {
-  if (mode === 'all') return ['mcp', 'instructions', 'skills', 'rtk-source'];
-  if (mode === 'mcp' || mode === 'instructions' || mode === 'skills' || mode === 'rtk-source') return [mode];
+  if (mode === 'all') return ['mcp', 'instructions', 'skills', 'hooks', 'rtk-source'];
+  if (['mcp', 'instructions', 'skills', 'hooks', 'rtk-source'].includes(mode)) return [mode as SetupMode];
   throw new Error(`Unsupported mode: ${mode}`);
 }

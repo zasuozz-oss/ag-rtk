@@ -34,6 +34,7 @@ function globalHome(client: ClientName): string {
     case 'antigravity':
       return path.join(home, '.gemini', 'antigravity');
     case 'claude':
+    case 'claude-cli':
       return path.join(home, '.claude');
     case 'codex':
       return path.join(home, '.codex');
@@ -47,6 +48,7 @@ function globalInstructionsPath(client: ClientName): string {
       // Gemini CLI reads ~/.gemini/GEMINI.md as global instructions for ALL projects
       return path.join(home, '.gemini', 'GEMINI.md');
     case 'claude':
+    case 'claude-cli':
       return path.join(home, '.claude', 'CLAUDE.md');
     case 'codex':
       return path.join(home, '.codex', 'AGENTS.md');
@@ -130,7 +132,7 @@ export async function installInstructions(client: ClientName, cwd: string, globa
   await fs.copyFile(rtkMdSource, rtkMdTarget);
   written.push(rtkMdTarget);
 
-  if (client === 'claude') {
+  if (client === 'claude' || client === 'claude-cli') {
     const claudeMd = path.join(cwd, 'CLAUDE.md');
     await upsertReference(claudeMd, '@RTK.md');
     written.push(claudeMd);
@@ -164,7 +166,7 @@ export async function installSkills(client: ClientName, cwd: string, global = fa
   let target: string;
   if (global) {
     target = globalSkillsPath(client);
-  } else if (client === 'claude') {
+  } else if (client === 'claude' || client === 'claude-cli') {
     target = path.join(cwd, '.claude', 'skills');
   } else {
     target = path.join(cwd, '.agents', 'skills');
