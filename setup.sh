@@ -272,20 +272,18 @@ build_mcp_server() {
 
 # ─── Configure clients ───────────────────────────────────────────────────────
 configure_clients() {
-  step "Cấu hình clients (Antigravity / Claude CLI)"
+  step "Cấu hình clients (Antigravity)"
 
   cd "$SCRIPT_DIR"
 
-  # 1. MCP config — chỉ Antigravity (Claude CLI dùng hooks riêng)
+  # 1. MCP config — Antigravity
   step "Ghi MCP config (Antigravity)"
   node dist/cli.js setup --client antigravity --mode mcp --cwd "$SCRIPT_DIR"
 
-  # 2. Instructions + skills: cài global vào ~/.gemini, ~/.claude
+  # 2. Instructions + skills: cài global vào ~/.gemini
   step "Cài instructions & skills (global)"
   node dist/cli.js setup --client antigravity --mode instructions --global --cwd "$SCRIPT_DIR"
-  node dist/cli.js setup --client claude-cli --mode instructions --global --cwd "$SCRIPT_DIR"
   node dist/cli.js setup --client antigravity --mode skills --global --cwd "$SCRIPT_DIR"
-  node dist/cli.js setup --client claude-cli --mode skills --global --cwd "$SCRIPT_DIR"
 
   # 3. Clone/pull RTK Rust source vào ./RTK/ — có thể fail (network/git).
   #    Dùng || true để không block các bước trên nếu step này lỗi.
@@ -306,44 +304,7 @@ configure_clients() {
   info "Restart Antigravity để áp dụng."
 }
 
-# ─── Configure CLI hooks/instructions ────────────────────────────────────────
-configure_claude_cli_hooks() {
-  step "Cấu hình Claude Code CLI hooks (rtk init)"
 
-  export PATH="${RTK_INSTALL_DIR}:$PATH"
-  if ! command -v rtk >/dev/null 2>&1; then
-    warn "RTK binary chưa sẵn sàng. Bỏ qua Claude CLI hooks."
-    return 0
-  fi
-
-  if rtk init -g --auto-patch; then
-    ok "Claude Code CLI hooks đã cài đặt."
-    info "Hook: rtk hook claude"
-    info "Settings: ~/.claude/settings.json (PreToolUse hook đã đăng ký)"
-  else
-    warn "rtk init -g thất bại. Claude Code CLI hooks chưa được cài."
-    warn "Chạy thủ công: rtk init -g"
-  fi
-}
-
-configure_codex_cli_hooks() {
-  step "Cấu hình Codex CLI hooks/instructions (rtk init --codex)"
-
-  export PATH="${RTK_INSTALL_DIR}:$PATH"
-  if ! command -v rtk >/dev/null 2>&1; then
-    warn "RTK binary chưa sẵn sàng. Bỏ qua Codex CLI hooks/instructions."
-    return 0
-  fi
-
-  if rtk init -g --codex; then
-    ok "Codex CLI hooks/instructions đã cài đặt."
-    info "Command: rtk init -g --codex"
-    info "Files: ${CODEX_HOME:-$HOME/.codex}/AGENTS.md và RTK.md"
-  else
-    warn "rtk init -g --codex thất bại. Codex CLI hooks/instructions chưa được cài."
-    warn "Chạy thủ công: rtk init -g --codex"
-  fi
-}
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 main() {
@@ -358,16 +319,12 @@ main() {
   verify_rtk
   build_mcp_server
   configure_clients "${1:-}"
-  configure_claude_cli_hooks
-  configure_codex_cli_hooks
   check_ripgrep
 
   echo ""
   echo -e "${GREEN}${BOLD}✓ Setup hoàn tất!${NC}"
   echo -e "  RTK binary : ${RTK_INSTALL_DIR}/rtk"
   echo -e "  MCP server : ${SCRIPT_DIR}/dist/cli.js"
-  echo -e "  Claude CLI : rtk hook claude"
-  echo -e "  Codex CLI  : rtk init -g --codex"
   echo -e "  Tiếp theo  : Restart Antigravity"
 }
 
