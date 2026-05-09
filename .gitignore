@@ -3,4 +3,6 @@ dist/
 coverage/
 # Runtime artifacts
 .rtk-mcp/
+# Upstream RTK cache (clone gốc dùng để pull updates)
+.RTK/
 *.log

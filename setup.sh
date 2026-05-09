@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # ag-rtk setup script
-# Cài RTK binary (pre-built) + build MCP server + cấu hình clients
+# Cài RTK binary (pre-built) + build custom MCP server CHỈ cho Antigravity
+# Claude Code & Codex CLI dùng trực tiếp repo gốc:
+#   claude-code : rtk init -g
+#   codex-cli   : rtk init -g --codex
+#
 # Dùng: ./setup.sh [--update] [--force]
 #   (không có flag) : Bỏ qua RTK binary nếu đã có bất kỳ version nào
 #   --update, -u   : Cập nhật RTK binary nếu phát hiện version mới hơn
@@ -260,9 +264,10 @@ check_ripgrep() {
   fi
 }
 
-# ─── Build MCP server ────────────────────────────────────────────────────────
+# ─── Build MCP server (Antigravity only) ─────────────────────────────────────
 build_mcp_server() {
-  step "Build MCP server (Node.js)"
+  step "Build custom MCP server cho Antigravity (Node.js)"
+  info "Claude Code / Codex CLI không cần build — dùng 'rtk init -g' từ repo gốc."
 
   cd "$SCRIPT_DIR"
   npm install
@@ -270,9 +275,10 @@ build_mcp_server() {
   ok "MCP server built → dist/"
 }
 
-# ─── Configure clients ───────────────────────────────────────────────────────
+# ─── Configure clients (Antigravity only) ────────────────────────────────────
 configure_clients() {
-  step "Cấu hình clients (Antigravity)"
+  step "Cấu hình client: Antigravity (custom MCP)"
+  info "Claude Code / Codex CLI: chạy 'rtk init -g' hoặc 'rtk init -g --codex' trực tiếp."
 
   cd "$SCRIPT_DIR"
 
@@ -285,22 +291,44 @@ configure_clients() {
   node dist/cli.js setup --client antigravity --mode instructions --global --cwd "$SCRIPT_DIR"
   node dist/cli.js setup --client antigravity --mode skills --global --cwd "$SCRIPT_DIR"
 
-  # 3. Clone/pull RTK Rust source vào ./RTK/ — có thể fail (network/git).
-  #    Dùng || true để không block các bước trên nếu step này lỗi.
+  # 3. Sync RTK source từ repo gốc → .RTK/ (cache) → RTK/ (working copy)
   step "Sync RTK source (optional)"
-  if node dist/cli.js setup --client antigravity --mode rtk-source --cwd "$SCRIPT_DIR"; then
-    # Strip RTK/.git sau khi sync để parent repo track được source files trực tiếp.
-    # Khi setup lại, rtk-source.ts phát hiện RTK/ không có .git rồi clone mới.
-    if [[ -d "$SCRIPT_DIR/RTK/.git" ]]; then
-      info "Strip RTK/.git để parent repo track được source files..."
-      rm -rf "$SCRIPT_DIR/RTK/.git"
-      ok "RTK/.git đã xóa — RTK source sẵn sàng cho git add."
-    fi
+  local cache_dir="${SCRIPT_DIR}/.RTK"
+
+  # Clone hoặc pull vào .RTK/
+  if [[ -d "${cache_dir}/.git" ]]; then
+    info "Cache .RTK/ đã có — pulling latest..."
+    git -C "$cache_dir" pull --ff-only 2>/dev/null || git -C "$cache_dir" pull 2>/dev/null || \
+      warn "Pull .RTK/ thất bại — dùng bản cache cũ."
   else
-    warn "RTK source sync thất bại (network hoặc git lỗi). Bỏ qua — không ảnh hưởng MCP."
+    [[ -d "$cache_dir" ]] && rm -rf "$cache_dir"
+    info "Clone RTK source vào .RTK/..."
+    git clone "https://github.com/rtk-ai/rtk.git" "$cache_dir" || {
+      warn "Clone thất bại (network/git lỗi). Bỏ qua — không ảnh hưởng MCP."
+    }
   fi
 
-  ok "RTK MCP setup hoàn tất."
+  # Sync .RTK/ → RTK/ (an toàn, giữ custom edits)
+  if [[ -d "$cache_dir" ]]; then
+    mkdir -p "$SCRIPT_DIR/RTK"
+    if command -v rsync >/dev/null 2>&1; then
+      rsync -a --update --exclude='.git' "${cache_dir}/" "$SCRIPT_DIR/RTK/"
+    else
+      cd "$cache_dir"
+      find . -not -path './.git/*' -not -name '.git' -type f | while read -r file; do
+        local src="${cache_dir}/${file}"
+        local dst="${SCRIPT_DIR}/RTK/${file}"
+        mkdir -p "$(dirname "$dst")"
+        if [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
+          cp "$src" "$dst"
+        fi
+      done
+      cd "$SCRIPT_DIR"
+    fi
+    ok "RTK source đã sync (.RTK/ → RTK/) — giữ nguyên custom edits."
+  fi
+
+  ok "Antigravity RTK MCP setup hoàn tất."
   info "Restart Antigravity để áp dụng."
 }
 
@@ -323,9 +351,13 @@ main() {
 
   echo ""
   echo -e "${GREEN}${BOLD}✓ Setup hoàn tất!${NC}"
-  echo -e "  RTK binary : ${RTK_INSTALL_DIR}/rtk"
-  echo -e "  MCP server : ${SCRIPT_DIR}/dist/cli.js"
-  echo -e "  Tiếp theo  : Restart Antigravity"
+  echo -e "  RTK binary  : ${RTK_INSTALL_DIR}/rtk"
+  echo -e "  MCP server  : ${SCRIPT_DIR}/dist/cli.js ${CYAN}(Antigravity only)${NC}"
+  echo -e "  Tiếp theo   : Restart Antigravity"
+  echo ""
+  echo -e "${BOLD}Các client khác (dùng repo gốc, không cần script này):${NC}"
+  echo -e "  Claude Code : ${CYAN}rtk init -g${NC}"
+  echo -e "  Codex CLI   : ${CYAN}rtk init -g --codex${NC}"
 }
 
 main "$@"
